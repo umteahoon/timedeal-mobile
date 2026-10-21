@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="타임딜 — 이웃과 함께하는 시간 한정 공동구매">
+  <meta name="theme-color" content="#FF5722">
+
+  <script>
+    // PC로 들어오면 웹 버전(timedeal.netlify.app)으로 보냅니다. ?view=app 으로 들어오면 그 선택을 기억하고 앱 화면을 유지합니다.
+    (function () {
+      try {
+        var q = new URLSearchParams(location.search).get("view");
+        if (q === "app" || q === "pc") localStorage.setItem("td_view", q);
+        var pref = localStorage.getItem("td_view");
+        var standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+        var mobile = /Android|iPhone|iPod|iPad|Mobile/i.test(navigator.userAgent) || matchMedia("(pointer: coarse)").matches;
+        if (!standalone && pref !== "app" && (pref === "pc" || !mobile)) location.replace("https://timedeal.netlify.app/" + (pref === "pc" ? "?view=pc" : ""));
+      } catch (e) {}
+    })();
+  </script>
+
+  <!-- iOS 홈 화면 추가 -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="타임딜">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>타임딜</title>
+  <link rel="manifest" href="manifest.json">
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAGCy50gmUGqX8kgoj_9Bc0LWPTqfDTy8U"></script>
+</head>
+<body style="background:#ffffff">
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

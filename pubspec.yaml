@@ -1,0 +1,51 @@
+name: town_flash_deal
+description: "우리 동네 타임딜 - 하이퍼로컬 마감 특가 앱"
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.11.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+  provider: ^6.1.2
+  google_fonts: ^6.2.1
+  # 최신 Flutter에서 IconData 상속이 막혀 패치한 사본을 씁니다(packages/lucide_icons).
+  lucide_icons:
+    path: packages/lucide_icons
+  cached_network_image: ^3.4.1
+  shared_preferences: ^2.3.0
+  google_maps_flutter: ^2.9.0
+  geolocator: ^13.0.0
+  share_plus: ^10.1.0
+  http: ^1.2.2
+  supabase_flutter: ^2.9.0
+  image_picker: ^1.1.2
+  flutter_svg: ^2.0.10+1
+  geocoding: ^3.0.0
+  google_sign_in: ^6.2.2
+  url_launcher: ^6.3.0
+  flutter_web_auth_2: ^4.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.3
+
+flutter_launcher_icons:
+  ios: true
+  android: false
+  image_path: "assets/app_icon.png"
+  remove_alpha_ios: true
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/
+    - assets/icons/
+  fonts:
+    - family: Pacifico
+      fonts:
+        - asset: assets/fonts/Pacifico-Regular.ttf

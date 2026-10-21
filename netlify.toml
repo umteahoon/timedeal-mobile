@@ -1,0 +1,21 @@
+# Netlify 빌드 설정: Netlify 서버에 Flutter를 받아서 웹(PWA)으로 빌드합니다.
+# (로컬에서 flutter build web 후 build/web 폴더를 직접 배포해도 됩니다.)
+[build]
+  command = "git clone --depth 1 -b stable https://github.com/flutter/flutter.git $HOME/flutter && $HOME/flutter/bin/flutter build web --release --no-wasm-dry-run"
+  publish = "build/web"
+
+# Flutter 앱은 한 페이지(SPA)라서 모든 경로를 index.html로 보냅니다.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# 서비스 워커·매니페스트는 항상 최신으로
+[[headers]]
+  for = "/flutter_service_worker.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+[[headers]]
+  for = "/manifest.json"
+  [headers.values]
+    Cache-Control = "no-cache"

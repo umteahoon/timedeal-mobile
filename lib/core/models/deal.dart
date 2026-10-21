@@ -1,0 +1,183 @@
+import 'package:flutter/widgets.dart';
+import 'package:lucide_icons/lucide_icons.dart';
+
+class Deal {
+  final String id;
+  final String storeId;
+  final String storeName;
+  final String storeCategory;
+  final String title;
+  final String description;
+  final int originalPrice;
+  final int discountedPrice;
+  final int totalStock;
+  final int remainingStock;
+  final DateTime expiresAt;
+  final double distanceKm;
+  final String iconName;
+  final String imageUrl;
+  final double? storeLat;
+  final double? storeLng;
+  final String? neighborhood;
+  // 웹 연동: 상품 ID(찜은 상품 기준)와 픽업 거점 주소
+  final String productId;
+  final String? pickupAddress;
+
+  Deal({
+    required this.id,
+    required this.storeId,
+    required this.storeName,
+    required this.storeCategory,
+    required this.title,
+    required this.description,
+    required this.originalPrice,
+    required this.discountedPrice,
+    required this.totalStock,
+    required this.remainingStock,
+    required this.expiresAt,
+    required this.distanceKm,
+    required this.iconName,
+    required this.imageUrl,
+    this.storeLat,
+    this.storeLng,
+    this.neighborhood,
+    this.productId = '',
+    this.pickupAddress,
+  });
+
+  static final _iconMap = <String, IconData>{
+    'wheat': LucideIcons.wheat,
+    'utensils': LucideIcons.utensils,
+    'coffee': LucideIcons.coffee,
+    'shoppingCart': LucideIcons.shoppingCart,
+    'flower2': LucideIcons.flower2,
+    'store': LucideIcons.store,
+  };
+
+  IconData get icon => _iconMap[iconName] ?? LucideIcons.store;
+
+  int get discountPercent => originalPrice == 0
+      ? 0
+      : ((originalPrice - discountedPrice) / originalPrice * 100).round();
+
+  double get stockRatio => totalStock == 0 ? 0.0 : remainingStock / totalStock;
+
+  bool get isSoldOut => remainingStock <= 0;
+
+  bool get isExpired => expiresAt.isBefore(DateTime.now());
+
+  bool get isClosed => isExpired || isSoldOut;
+
+  bool get isUrgent =>
+      !isClosed && expiresAt.difference(DateTime.now()).inMinutes < 30;
+
+  Duration get remaining => expiresAt.difference(DateTime.now());
+
+  /// 딜 ID → 상품 ID (웹 찜 목록은 상품 기준이라 변환할 때 씀)
+  static final Map<String, String> productIdOf = {};
+
+  factory Deal.fromJson(Map<String, dynamic> json) {
+    final deal = Deal._fromJson(json);
+    if (deal.productId.isNotEmpty) productIdOf[deal.id] = deal.productId;
+    return deal;
+  }
+
+  factory Deal._fromJson(Map<String, dynamic> json) => Deal(
+        id: json['id'] as String,
+        storeId: (json['store_id'] as String?) ?? '',
+        storeName: json['store_name'] as String,
+        storeCategory: json['store_category'] as String,
+        title: json['title'] as String,
+        description: json['description'] as String,
+        originalPrice: json['original_price'] as int,
+        discountedPrice: json['discounted_price'] as int,
+        totalStock: json['total_stock'] as int,
+        remainingStock: json['remaining_stock'] as int,
+        expiresAt: DateTime.parse(json['expires_at'] as String).toLocal(),
+        distanceKm: (json['distance_km'] as num?)?.toDouble() ?? 0.0,
+        iconName: (json['icon_name'] as String?) ?? 'store',
+        imageUrl: (json['image_url'] as String?) ?? '',
+        storeLat: (json['store_lat'] as num?)?.toDouble(),
+        storeLng: (json['store_lng'] as num?)?.toDouble(),
+        neighborhood: json['neighborhood'] as String?,
+        productId: (json['product_id'] as String?) ?? '',
+        pickupAddress: json['pickup_address'] as String?,
+      );
+
+  factory Deal.placeholder() => Deal(
+        id: '',
+        storeId: '',
+        storeName: '삭제된 가게',
+        storeCategory: '',
+        title: '삭제된 딜',
+        description: '',
+        originalPrice: 0,
+        discountedPrice: 0,
+        totalStock: 1,
+        remainingStock: 0,
+        expiresAt: DateTime(2000),
+        distanceKm: 0,
+        iconName: 'store',
+        imageUrl: '',
+      );
+
+  Deal copyWith({
+    String? id,
+    String? storeId,
+    String? storeName,
+    String? storeCategory,
+    String? title,
+    String? description,
+    int? originalPrice,
+    int? discountedPrice,
+    int? totalStock,
+    int? remainingStock,
+    DateTime? expiresAt,
+    double? distanceKm,
+    String? iconName,
+    String? imageUrl,
+    double? storeLat,
+    double? storeLng,
+    String? neighborhood,
+  }) => Deal(
+        id: id ?? this.id,
+        storeId: storeId ?? this.storeId,
+        storeName: storeName ?? this.storeName,
+        storeCategory: storeCategory ?? this.storeCategory,
+        title: title ?? this.title,
+        description: description ?? this.description,
+        originalPrice: originalPrice ?? this.originalPrice,
+        discountedPrice: discountedPrice ?? this.discountedPrice,
+        totalStock: totalStock ?? this.totalStock,
+        remainingStock: remainingStock ?? this.remainingStock,
+        expiresAt: expiresAt ?? this.expiresAt,
+        distanceKm: distanceKm ?? this.distanceKm,
+        iconName: iconName ?? this.iconName,
+        imageUrl: imageUrl ?? this.imageUrl,
+        storeLat: storeLat ?? this.storeLat,
+        storeLng: storeLng ?? this.storeLng,
+        neighborhood: neighborhood ?? this.neighborhood,
+        productId: productId,
+        pickupAddress: pickupAddress,
+      );
+  // [Kiro | 2026-08-21] copyWith() — distanceKm 단일 파라미터에서 전체 필드 지원으로 확장
+  // [Claude | 2026-08-21] 수정범위: Deal 모델 — storeLat/storeLng/neighborhood 필드 추가 (웹 연동용 실제 위치 저장)
+
+  Map<String, dynamic> toJson() => {
+        'store_id': storeId,
+        'store_name': storeName,
+        'store_category': storeCategory,
+        'title': title,
+        'description': description,
+        'original_price': originalPrice,
+        'discounted_price': discountedPrice,
+        'total_stock': totalStock,
+        'remaining_stock': remainingStock,
+        'expires_at': expiresAt.toUtc().toIso8601String(),
+        'icon_name': iconName,
+        'store_lat': storeLat,
+        'store_lng': storeLng,
+        'neighborhood': neighborhood,
+        'image_url': imageUrl,
+      };
+}
