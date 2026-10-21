@@ -49,3 +49,6 @@ presentation/dist/
 
 # Flutter web build output
 /build/
+
+# Local Netlify folder
+.netlify
