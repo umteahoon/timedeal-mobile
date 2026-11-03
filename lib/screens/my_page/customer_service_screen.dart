@@ -1,9 +1,7 @@
 // [Antigravity | 2026-08-23] 수정범위: CustomerServiceScreen — 실기기 네이티브 전화 걸기(tel: URL Launcher) 연동 및 서비스 이용약관/개인정보 처리방침/위치기반 서비스 이용약관 전문 리더기 연결
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/app_haptics.dart';
 import 'terms_detail_screen.dart';
@@ -11,44 +9,43 @@ import 'terms_detail_screen.dart';
 class CustomerServiceScreen extends StatelessWidget {
   const CustomerServiceScreen({super.key});
 
-  Future<void> _makePhoneCall(BuildContext context) async {
+  // [Claude | 2026-11-03] 수정범위: 전시용 — 대표번호·이메일·카카오 채널이 아직 실제 창구가 아니라서
+  // 전화 걸기·메일 앱 열기 대신 안내 창을 보여줍니다. (관람객 휴대폰에서 모르는 번호로 전화가 걸리지 않게)
+  void _makePhoneCall(BuildContext context) {
     AppHaptics.selection();
-    final Uri phoneUri = Uri(scheme: 'tel', path: '15880000');
-    try {
-      final launched = await launchUrl(phoneUri, mode: LaunchMode.platformDefault);
-      if (!launched && context.mounted) {
-        _showPhoneFallbackDialog(context);
-      }
-    } catch (_) {
-      if (context.mounted) {
-        _showPhoneFallbackDialog(context);
-      }
-    }
+    _showChannelDialog(
+      context,
+      title: '고객센터 유선 상담',
+      body: '대표번호: 1588-0000\n운영시간: 평일 09:00 ~ 18:00 (주말·공휴일 휴무)\n\n지금은 졸업작품 전시용 데모라 실제 전화 상담은 운영하지 않아요.',
+    );
   }
 
-  void _showPhoneFallbackDialog(BuildContext context) {
+  void _openEmail(BuildContext context) {
+    AppHaptics.selection();
+    _showChannelDialog(
+      context,
+      title: '이메일 문의',
+      body: '접수 주소: support@townflashdeal.kr (24시간 접수)\n\n지금은 전시용 데모라 메일 접수는 운영하지 않아요. 앱 안의 FAQ를 먼저 확인해 주세요.',
+    );
+  }
+
+  void _openKakaoChannel(BuildContext context) {
+    AppHaptics.selection();
+    _showChannelDialog(
+      context,
+      title: '카카오톡 1:1 상담톡',
+      body: '카카오톡 채널 @우리동네타임딜 상담은 준비 중이에요.\n정식 오픈 후 실시간 채팅으로 문의하실 수 있어요.',
+    );
+  }
+
+  void _showChannelDialog(BuildContext context, {required String title, required String body}) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('고객센터 유선 상담', style: TextStyle(fontWeight: FontWeight.w700)),
-        content: const Text(
-          '고객센터 대표번호: 1588-0000\n운영시간: 평일 09:00 ~ 18:00\n\n(통화 기능 미지원 환경인 경우 휴대폰 전화 앱에서 1588-0000으로 연결해 주세요)',
-        ),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+        content: Text(body),
         actions: [
-          TextButton(
-            onPressed: () {
-              Clipboard.setData(const ClipboardData(text: '1588-0000'));
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('대표번호(1588-0000)가 복사되었습니다'),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
-            child: const Text('번호 복사'),
-          ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
             onPressed: () => Navigator.pop(ctx),
@@ -57,39 +54,6 @@ class CustomerServiceScreen extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  Future<void> _openEmail(BuildContext context) async {
-    AppHaptics.selection();
-    final Uri emailUri = Uri(
-      scheme: 'mailto',
-      path: 'support@townflashdeal.kr',
-      query: 'subject=[우리동네타임딜 고객센터 문의]',
-    );
-    try {
-      final launched = await launchUrl(emailUri, mode: LaunchMode.platformDefault);
-      if (!launched) {
-        await Clipboard.setData(const ClipboardData(text: 'support@townflashdeal.kr'));
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('이메일 주소(support@townflashdeal.kr)가 복사되었습니다'),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      }
-    } catch (_) {
-      await Clipboard.setData(const ClipboardData(text: 'support@townflashdeal.kr'));
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('이메일 주소(support@townflashdeal.kr)가 복사되었습니다'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
   }
 
   @override
@@ -179,15 +143,7 @@ class CustomerServiceScreen extends StatelessWidget {
             tag: '추천',
             tagColor: const Color(0xFFFEE500),
             tagTextColor: const Color(0xFF191919),
-            onTap: () {
-              AppHaptics.selection();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('카카오톡 @우리동네타임딜 채널 1:1 상담으로 연결됩니다'),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
+            onTap: () => _openKakaoChannel(context),
           ),
           const SizedBox(height: 10),
 
@@ -196,7 +152,7 @@ class CustomerServiceScreen extends StatelessWidget {
             badgeBg: AppColors.primary.withValues(alpha: 0.12),
             icon: Icon(LucideIcons.phoneCall, size: 22, color: AppColors.primary),
             title: '전화 상담 (1588-0000)',
-            subtitle: '전문 상담원과 유선 통화로 연결됩니다',
+            subtitle: '평일 09:00 ~ 18:00 · 상담 안내 보기',
             onTap: () => _makePhoneCall(context),
           ),
           const SizedBox(height: 10),

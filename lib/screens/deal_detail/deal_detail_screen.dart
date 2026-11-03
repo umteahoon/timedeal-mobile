@@ -175,7 +175,8 @@ class _DealDetailScreenState extends State<DealDetailScreen> {
                     await Share.share(
                       '[타임딜] ${d.storeName} - ${d.title}\n'
                       '${d.discountPercent}% 할인 · ${Formatters.price(d.discountedPrice)}원\n'
-                      '우리 동네 타임딜에서 확인하세요!',
+                      '우리 동네 타임딜에서 확인하세요!\n'
+                      'https://timedeal-mobile.netlify.app',
                       subject: d.title,
                       sharePositionOrigin: origin,
                     );

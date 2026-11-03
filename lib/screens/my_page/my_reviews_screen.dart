@@ -2,7 +2,9 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:provider/provider.dart';
+import '../../core/models/reservation.dart';
 import '../../core/providers/reservation_provider.dart';
+import '../../core/services/api_client.dart';
 import '../../core/theme/app_colors.dart';
 
 class MyReviewsScreen extends StatefulWidget {
@@ -15,11 +17,91 @@ class MyReviewsScreen extends StatefulWidget {
 class _MyReviewsScreenState extends State<MyReviewsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  // [Claude | 2026-11-03] 수정범위: 리뷰 작성·작성한 리뷰 목록을 서버(/mobile/reviews)와 연결
+  List<Map<String, dynamic>> _reviews = [];
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _loadReviews();
+  }
+
+  Future<void> _loadReviews() async {
+    try {
+      final data = await ApiClient.get('/mobile/reviews');
+      if (!mounted) return;
+      setState(() => _reviews = List<Map<String, dynamic>>.from(data['reviews'] as List? ?? []));
+    } catch (_) {
+      // 목록을 못 불러와도 화면은 빈 상태로 보여줍니다.
+    }
+  }
+
+  Future<void> _openReviewSheet(Reservation res) async {
+    int rating = 5;
+    final controller = TextEditingController();
+    final saved = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) {
+        bool sending = false;
+        String? error;
+        return StatefulBuilder(builder: (ctx, setSheet) {
+          return Padding(
+            padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(res.deal.title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 4),
+                Text(res.deal.storeName, style: TextStyle(fontSize: 13, color: Colors.grey[500])),
+                const SizedBox(height: 16),
+                Row(
+                  children: List.generate(5, (i) => IconButton(
+                    onPressed: () => setSheet(() => rating = i + 1),
+                    icon: Icon(i < rating ? Icons.star_rounded : Icons.star_outline_rounded, color: AppColors.primary, size: 32),
+                  )),
+                ),
+                TextField(
+                  controller: controller,
+                  maxLines: 4,
+                  maxLength: 1000,
+                  decoration: const InputDecoration(hintText: '상품은 어땠나요? 이웃들에게 솔직한 후기를 남겨주세요.', border: OutlineInputBorder()),
+                ),
+                if (error != null) Padding(padding: const EdgeInsets.only(bottom: 8), child: Text(error!, style: const TextStyle(color: Colors.red, fontSize: 13))),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+                    onPressed: sending
+                        ? null
+                        : () async {
+                            setSheet(() { sending = true; error = null; });
+                            try {
+                              await ApiClient.post('/mobile/reservations/${res.id}/review', {'rating': rating, 'content': controller.text.trim()});
+                              if (ctx.mounted) Navigator.pop(ctx, true);
+                            } catch (e) {
+                              setSheet(() { sending = false; error = e.toString(); });
+                            }
+                          },
+                    child: Text(sending ? '등록 중...' : '리뷰 등록', style: const TextStyle(fontWeight: FontWeight.w700)),
+                  ),
+                ),
+              ],
+            ),
+          );
+        });
+      },
+    );
+    controller.dispose();
+    if (saved == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('리뷰를 등록했어요. 고마워요!'), behavior: SnackBarBehavior.floating));
+      await _loadReviews();
+      _tabController.animateTo(1);
+    }
   }
 
   @override
@@ -32,7 +114,8 @@ class _MyReviewsScreenState extends State<MyReviewsScreen>
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final rp = context.watch<ReservationProvider>();
-    final completedPickups = rp.byStatus('픽업완료');
+    final reviewedIds = _reviews.map((r) => r['reservation_id']).toSet();
+    final completedPickups = rp.byStatus('픽업완료').where((r) => !reviewedIds.contains(r.id)).toList();
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF141417) : const Color(0xFFF8F9FA),
@@ -51,7 +134,7 @@ class _MyReviewsScreenState extends State<MyReviewsScreen>
           dividerColor: Colors.transparent,
           tabs: [
             Tab(text: '작성 가능한 리뷰 (${completedPickups.length})'),
-            const Tab(text: '작성한 리뷰 (0)'),
+            Tab(text: '작성한 리뷰 (${_reviews.length})'),
           ],
         ),
         // [Claude | 2026-08-21] 수정범위: TabBar dividerColor 추가 — M3 기본 전체폭 구분선(검은 줄) 제거
@@ -118,14 +201,7 @@ class _MyReviewsScreenState extends State<MyReviewsScreen>
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                               ),
-                              onPressed: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('리뷰 작성 기능이 준비 중입니다'),
-                                    behavior: SnackBarBehavior.floating,
-                                  ),
-                                );
-                              },
+                              onPressed: () => _openReviewSheet(res),
                               icon: Icon(LucideIcons.star, size: 16),
                               label: const Text('리뷰 작성하기', style: TextStyle(fontWeight: FontWeight.w700)),
                             ),
@@ -137,11 +213,46 @@ class _MyReviewsScreenState extends State<MyReviewsScreen>
                 ),
 
           // 탭 2: 작성한 리뷰
-          _buildEmptyState(
-            icon: LucideIcons.star,
-            title: '아직 작성한 리뷰가 없어요',
-            subtitle: '동네 타임딜 픽업 후 남겨주신 소중한 리뷰가\n이곳에 모이게 됩니다.',
-          ),
+          _reviews.isEmpty
+              ? _buildEmptyState(
+                  icon: LucideIcons.star,
+                  title: '아직 작성한 리뷰가 없어요',
+                  subtitle: '동네 타임딜 픽업 후 남겨주신 소중한 리뷰가\n이곳에 모이게 됩니다.',
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _reviews.length,
+                  itemBuilder: (ctx, i) {
+                    final review = _reviews[i];
+                    final rating = (review['rating'] as num?)?.toInt() ?? 0;
+                    final date = DateTime.tryParse(review['created_at'] as String? ?? '')?.toLocal();
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).scaffoldBackgroundColor,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: isDark ? Colors.white12 : Colors.grey.withValues(alpha: 0.15)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(review['product_name'] as String? ?? '', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                          const SizedBox(height: 6),
+                          Row(children: [
+                            ...List.generate(5, (s) => Icon(s < rating ? Icons.star_rounded : Icons.star_outline_rounded, size: 18, color: AppColors.primary)),
+                            if (date != null) ...[
+                              const SizedBox(width: 8),
+                              Text('${date.year}.${date.month}.${date.day}', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+                            ],
+                          ]),
+                          const SizedBox(height: 8),
+                          Text(review['content'] as String? ?? '', style: const TextStyle(fontSize: 14, height: 1.5)),
+                        ],
+                      ),
+                    );
+                  },
+                ),
         ],
       ),
     );

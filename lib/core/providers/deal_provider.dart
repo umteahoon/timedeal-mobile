@@ -14,6 +14,8 @@ class DealProvider extends ChangeNotifier {
   Timer? _expiryTimer;
   bool _disposed = false;
   String? error;
+  /// 서버 응답을 한 번이라도 받았는지(첫 로딩 중에는 빈 목록 대신 로딩 표시를 보여줍니다).
+  bool loaded = false;
 
   // GPS를 받기 전에도 거리가 보이도록 기본 동네(성수동) 중심에서 계산해 둡니다.
   double? _lastLat = dealCenter.lat;
@@ -43,6 +45,7 @@ class DealProvider extends ChangeNotifier {
       AppLogger.error('Failed to load deals from web API', e, st);
       error = e.toString();
     }
+    loaded = true;
     _applyDistancesIfKnown();
     if (_disposed) return;
     notifyListeners();

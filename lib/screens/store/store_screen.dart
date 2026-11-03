@@ -17,7 +17,8 @@ class StoreScreen extends StatelessWidget {
     final storeDeals = context
         .watch<DealProvider>()
         .deals
-        .where((d) => d.storeId == deal.storeId)
+        // [Claude | 2026-11-03] 웹 딜은 판매자 계정 하나에 픽업 매장이 여러 곳이라 매장 이름까지 같아야 같은 가게로 봅니다.
+        .where((d) => d.storeId == deal.storeId && d.storeName == deal.storeName)
         .toList();
 
     return Scaffold(

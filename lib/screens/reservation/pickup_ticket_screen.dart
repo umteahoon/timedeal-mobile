@@ -82,17 +82,25 @@ class _PickupTicketScreenState extends State<PickupTicketScreen> {
     }
   }
 
-  Future<void> _makeCall(String phone) async {
+  // [Claude | 2026-11-03] 수정범위: 전시용 — 매장 번호가 실제 번호가 아니라서 전화를 걸지 않고 안내 창을 보여줍니다.
+  void _makeCall() {
     AppHaptics.selection();
-    final uri = Uri.parse('tel:$phone');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    } else {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('전화 연결을 시작할 수 없어요'), behavior: SnackBarBehavior.floating),
-      );
-    }
+    final deal = widget.reservation.deal;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(deal.storeName, style: const TextStyle(fontWeight: FontWeight.w700)),
+        content: Text('${deal.pickupAddress ?? '픽업 매장'}\n\n지금은 졸업작품 전시용 데모라 매장 전화 연결은 지원하지 않아요. 픽업 시간이 바뀌면 앱 알림으로 알려 드려요.'),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('확인', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _copyTicketCode() {
@@ -468,7 +476,7 @@ class _PickupTicketScreenState extends State<PickupTicketScreen> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: () => _makeCall('051-740-0000'),
+                        onPressed: _makeCall,
                         icon: Icon(LucideIcons.phone, size: 15),
                         label: const Text('매장 전화', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                         style: OutlinedButton.styleFrom(

@@ -330,7 +330,12 @@ class _HomeScreenState extends State<HomeScreen>
                       duration: const Duration(milliseconds: 280),
                       switchInCurve: Curves.easeOutCubic,
                       switchOutCurve: Curves.easeInCubic,
-                      child: filtered.isEmpty
+                      child: !dealProvider.loaded
+                          ? const Center(
+                              key: ValueKey('loading_deals'),
+                              child: CircularProgressIndicator(color: AppColors.primary),
+                            )
+                          : filtered.isEmpty
                           ? const EmptyStateView(
                               key: ValueKey('empty_deals'),
                               icon: Icons.local_offer_outlined,
