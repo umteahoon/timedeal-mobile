@@ -20,6 +20,21 @@
         if (!standalone && pref !== "app" && (pref === "pc" || !mobile)) location.replace("https://timedeal.netlify.app/" + (pref === "pc" ? "?view=pc" : ""));
       } catch (e) {}
     })();
+    // 컴퓨터에 설치한 앱 창으로 열면 창을 폰 크기로 맞춥니다(전시용).
+    (function () {
+      try {
+        var standalone = matchMedia("(display-mode: standalone)").matches;
+        var mobile = /Android|iPhone|iPod|iPad|Mobile/i.test(navigator.userAgent) || matchMedia("(pointer: coarse)").matches;
+        if (!standalone || mobile) return;
+        var fit = function () {
+          var w = 430 + (window.outerWidth - window.innerWidth);
+          var h = Math.min(screen.availHeight, 932 + (window.outerHeight - window.innerHeight));
+          window.resizeTo(w, h);
+        };
+        fit();
+        window.addEventListener("load", fit);
+      } catch (e) {}
+    })();
   </script>
 
   <!-- iOS 홈 화면 추가 -->

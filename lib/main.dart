@@ -52,6 +52,38 @@ class TownFlashDealApp extends StatelessWidget {
       darkTheme: AppTheme.dark,
       themeMode: themeProvider.mode,
       home: const SplashScreen(),
+      // [Claude | 2026-11-04] 컴퓨터처럼 넓은 화면에서는 가운데에 폰 크기 화면만 보여 줍니다(전시용).
+      builder: (context, child) => _PhoneFrame(child: child ?? const SizedBox()),
+    );
+  }
+}
+
+class _PhoneFrame extends StatelessWidget {
+  const _PhoneFrame({required this.child});
+  final Widget child;
+
+  static const double _phoneWidth = 430;
+
+  @override
+  Widget build(BuildContext context) {
+    final media = MediaQuery.of(context);
+    if (media.size.width <= 600) return child;
+    final height = media.size.height > 960 ? 932.0 : media.size.height;
+    return ColoredBox(
+      color: const Color(0xFF2B2B2B),
+      child: Center(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(media.size.height > 960 ? 28 : 0),
+          child: SizedBox(
+            width: _phoneWidth,
+            height: height,
+            child: MediaQuery(
+              data: media.copyWith(size: Size(_phoneWidth, height)),
+              child: child,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
