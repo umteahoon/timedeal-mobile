@@ -322,32 +322,11 @@ class _MapScreenState extends State<MapScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // 구글맵
-          GoogleMap(
-            initialCameraPosition: CameraPosition(
-              target: _initialCenter,
-              zoom: _zoomForRadius(loc.radiusKm),
-            ),
-            onMapCreated: _onMapCreated,
-            style: Theme.of(context).brightness == Brightness.dark
-                ? _darkMapStyle
-                : null,
-            markers: _buildMarkers(deals),
-            circles: {
-              Circle(
-                circleId: const CircleId('user_radius_circle'),
-                center: currentCenter,
-                radius: loc.radiusKm * 1000.0,
-                fillColor: AppColors.primary.withValues(alpha: 0.16),
-                strokeColor: AppColors.primary.withValues(alpha: 0.85),
-                strokeWidth: 2,
-              ),
-            },
-            myLocationEnabled: true,
-            myLocationButtonEnabled: false,
-            zoomControlsEnabled: false,
-            compassEnabled: false,
-            onTap: (_) => setState(() => _selectedDeal = null),
+          // 지도 없음: Google Maps 과금을 막기 위해 지도 대신 배경만 보여 주고, 딜은 아래 목록에서 봅니다.
+          _MapFreeBackdrop(
+            radiusKm: loc.radiusKm,
+            dealCount: deals.length,
+            onTap: () => setState(() => _selectedDeal = null),
           ),
 
           // 상단 검색바 & 반경 선택기
@@ -424,24 +403,6 @@ class _MapScreenState extends State<MapScreen> {
             ),
           ),
 
-          // 내 위치 버튼
-          Positioned(
-            bottom: 238,
-            right: 16,
-            child: FloatingActionButton.small(
-              heroTag: 'locate',
-              onPressed: () {
-                final mc2 = context.read<LocationProvider>().mapCenter;
-                _mapController?.animateCamera(
-                  CameraUpdate.newLatLngZoom(LatLng(mc2.lat, mc2.lng), 15.0),
-                );
-              },
-              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-              foregroundColor: AppColors.primary,
-              elevation: 4,
-              child: Icon(LucideIcons.locateFixed, size: 20),
-            ),
-          ),
 
           // [Antigravity | 2026-08-23] 수정범위: MapScreen — 하단 플로팅 메뉴바 가림 현상 해결 및 스와이프 가능한 DraggableScrollableSheet 연동
           NotificationListener<DraggableScrollableNotification>(
@@ -891,4 +852,62 @@ void _showRadiusPicker(
       },
     ),
   );
+}
+
+/// Google 지도 대신 쓰는 배경. 반경 원과 안내 문구만 그리며 외부 지도 API를 부르지 않습니다.
+class _MapFreeBackdrop extends StatelessWidget {
+  const _MapFreeBackdrop({required this.radiusKm, required this.dealCount, required this.onTap});
+
+  final num radiusKm;
+  final int dealCount;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Positioned.fill(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: dark
+                  ? const [Color(0xFF15182A), Color(0xFF1E2238)]
+                  : [AppColors.primary.withValues(alpha: 0.06), Colors.white],
+            ),
+          ),
+          child: Align(
+            alignment: const Alignment(0, -0.35),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 180,
+                  height: 180,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.primary.withValues(alpha: 0.10),
+                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.7), width: 2),
+                  ),
+                  child: Icon(LucideIcons.mapPin, size: 40, color: AppColors.primary),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  '내 주변 ${radiusKm}km · 딜 $dealCount개',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '아래 목록에서 가까운 딜을 확인하세요',
+                  style: TextStyle(fontSize: 13, color: Theme.of(context).hintColor),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

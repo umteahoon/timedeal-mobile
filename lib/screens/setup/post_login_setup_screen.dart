@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -510,45 +509,6 @@ class _RegionStep extends StatelessWidget {
                       radiusKm: radiusKm,
                     ),
                     const SizedBox(height: 20),
-                    // 반경 미니 지도
-                    if (position != null)
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: SizedBox(
-                          key: ValueKey(radiusKm),
-                          height: 200,
-                          child: GoogleMap(
-                            initialCameraPosition: CameraPosition(
-                              target: LatLng(position.latitude, position.longitude),
-                              zoom: radiusKm == 1 ? 14.5 : radiusKm == 3 ? 13.0 : 12.0,
-                            ),
-                            circles: {
-                              Circle(
-                                circleId: const CircleId('r'),
-                                center: LatLng(position.latitude, position.longitude),
-                                radius: radiusKm * 1000.0,
-                                fillColor: AppColors.primary.withValues(alpha: 0.08),
-                                strokeColor: AppColors.primary,
-                                strokeWidth: 2,
-                              ),
-                            },
-                            markers: {
-                              Marker(
-                                markerId: const MarkerId('me'),
-                                position: LatLng(position.latitude, position.longitude),
-                              ),
-                            },
-                            myLocationEnabled: false,
-                            myLocationButtonEnabled: false,
-                            zoomControlsEnabled: false,
-                            mapToolbarEnabled: false,
-                            scrollGesturesEnabled: false,
-                            zoomGesturesEnabled: false,
-                            rotateGesturesEnabled: false,
-                            tiltGesturesEnabled: false,
-                          ),
-                        ),
-                      ),
                     const SizedBox(height: 8),
                   ],
                 ),
