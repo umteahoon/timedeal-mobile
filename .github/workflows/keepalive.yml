@@ -1,0 +1,20 @@
+# 대회 심사 기간(2026-11~12)에 무료 Supabase DB가 잠들지 않도록 이틀마다 서버를 불러 깨웁니다.
+# /api/mobile/deals 는 DB를 조회하므로 Render 서버와 Supabase를 함께 깨웁니다. 비용 없음.
+name: keepalive
+on:
+  schedule:
+    - cron: "17 0 */2 * *"   # 이틀마다 09:17 (한국 시간)
+  workflow_dispatch: {}
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Wake Render + Supabase
+        run: |
+          for i in 1 2 3; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 90 https://time-deal.onrender.com/api/mobile/deals) && echo "try $i: $code"
+            [ "$code" = "200" ] && exit 0
+            sleep 30
+          done
+          exit 1
