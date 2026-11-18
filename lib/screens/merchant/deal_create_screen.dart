@@ -403,6 +403,11 @@ class _DealCreateScreenState extends State<DealCreateScreen> {
               ),
             ),
           ],
+          if (_imageBytes != null && !_aiFilled) ...[
+            const SizedBox(height: 4),
+            Text('사진을 생성형 AI(Google Gemini)로 보내 초안만 받아요. 등록은 직접 눌러야 돼요.',
+                style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+          ],
           if (_aiFilled) ...[
             const SizedBox(height: 8),
             Container(
@@ -411,7 +416,7 @@ class _DealCreateScreenState extends State<DealCreateScreen> {
                 color: AppColors.primary.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Text('AI가 작성한 초안이에요. 상품명·가격을 확인하고 고친 뒤 등록해 주세요.',
+              child: const Text('AI가 작성한 초안이에요(생성형 AI Google Gemini 사용). 상품명·가격을 확인하고 고친 뒤 등록해 주세요.',
                   style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
             ),
           ],

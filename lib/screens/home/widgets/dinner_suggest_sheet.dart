@@ -100,6 +100,9 @@ class _DinnerSuggestSheetState extends State<DinnerSuggestSheet> {
           const SizedBox(height: 4),
           Text('원하는 조건을 문장으로 적으면 지금 판매 중인 딜에서 골라 드려요.',
               style: TextStyle(fontSize: 12.5, color: Colors.grey[600])),
+          const SizedBox(height: 2),
+          Text('생성형 AI(Google Gemini)가 후보를 고르고, 서버가 재고·마감·예산을 다시 확인해요.',
+              style: TextStyle(fontSize: 11, color: Colors.grey[500])),
           const SizedBox(height: 12),
           TextField(
             controller: _ctrl,
