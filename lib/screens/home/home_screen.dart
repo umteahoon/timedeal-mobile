@@ -12,6 +12,7 @@ import '../search/search_screen.dart';
 import '../../widgets/empty_state_view.dart';
 import '../../widgets/neighborhood_reverification_dialog.dart';
 import 'widgets/deal_card.dart';
+import 'widgets/dinner_suggest_sheet.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -308,6 +309,34 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                   );
                 },
+              ),
+            ),
+          ),
+          // [Claude | 2026-11-18] AI 저녁 추천 진입 버튼
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: Material(
+              color: AppColors.primary.withValues(alpha: isDark ? 0.14 : 0.08),
+              borderRadius: BorderRadius.circular(12),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () {
+                  AppHaptics.light();
+                  DinnerSuggestSheet.show(context);
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  child: Row(children: [
+                    Icon(LucideIcons.sparkles, size: 16, color: AppColors.primary),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text('AI 저녁 추천받기 · "혼자 먹을 저녁, 만 원 이하"',
+                          maxLines: 1, overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                    ),
+                    Icon(LucideIcons.chevronRight, size: 16, color: AppColors.primary),
+                  ]),
+                ),
               ),
             ),
           ),

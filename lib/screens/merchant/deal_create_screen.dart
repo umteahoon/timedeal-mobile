@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:convert';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -11,6 +11,7 @@ import '../../core/data/mock_data.dart';
 import '../../core/providers/deal_provider.dart';
 import '../../core/providers/location_provider.dart';
 import '../../core/providers/reservation_provider.dart';
+import '../../core/services/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/app_haptics.dart';
 import '../../core/utils/app_logger.dart';
@@ -138,7 +139,10 @@ class _DealCreateScreenState extends State<DealCreateScreen> {
   String _selectedCategory = '베이커리';
   String? _selectedPresetUrl;
   XFile? _imageFile;
+  Uint8List? _imageBytes; // 웹(PWA)에서도 미리보기가 되도록 바이트로 보관
   bool _isSubmitting = false;
+  bool _aiLoading = false;
+  bool _aiFilled = false;
 
   @override
   void dispose() {
@@ -165,10 +169,63 @@ class _DealCreateScreenState extends State<DealCreateScreen> {
       maxHeight: 1000,
     );
     if (picked != null) {
+      final bytes = await picked.readAsBytes();
+      if (!mounted) return;
       setState(() {
         _imageFile = picked;
+        _imageBytes = bytes;
         _selectedPresetUrl = null;
+        _aiFilled = false;
       });
+    }
+  }
+
+  // [Claude | 2026-11-18] 사진으로 상품 초안 받기 — AI가 채운 값은 초안이며 사장님이 고친 뒤 직접 등록합니다.
+  String _mediaType(Uint8List b) {
+    if (b.length > 8 && b[0] == 0x89 && b[1] == 0x50 && b[2] == 0x4E && b[3] == 0x47) return 'image/png';
+    if (b.length > 12 && b[0] == 0x52 && b[1] == 0x49 && b[2] == 0x46 && b[3] == 0x46 && b[8] == 0x57 && b[9] == 0x45) return 'image/webp';
+    return 'image/jpeg';
+  }
+
+  Future<void> _aiDraft() async {
+    final bytes = _imageBytes;
+    if (bytes == null || _aiLoading) return;
+    setState(() => _aiLoading = true);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final data = await ApiClient.post('/mobile/merchant/ai/product-draft', {
+        'imageBase64': base64Encode(bytes),
+        'mediaType': _mediaType(bytes),
+      });
+      final d = (data['draft'] as Map<String, dynamic>?) ?? {};
+      if (d['isProduct'] == false) {
+        messenger.showSnackBar(const SnackBar(content: Text('판매 상품 사진으로 보이지 않아요. 다른 사진으로 해 보세요.'), behavior: SnackBarBehavior.floating));
+        return;
+      }
+      final original = (d['estimatedOriginalPrice'] as num?)?.toInt() ?? 0;
+      final pct = (d['suggestedDiscountPercent'] as num?)?.toInt() ?? 30;
+      final discounted = original > 0 ? ((original * (100 - pct) / 100) / 100).round() * 100 : 0;
+      String fmt(int v) => v.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]},');
+      setState(() {
+        _titleCtrl.text = (d['name'] as String?) ?? _titleCtrl.text;
+        _descCtrl.text = (d['description'] as String?) ?? _descCtrl.text;
+        final cat = d['category'] as String?;
+        if (cat != null && _categoryImages.containsKey(cat)) _selectedCategory = cat;
+        if (original > 0) {
+          _originalCtrl.text = fmt(original);
+          _discountCtrl.text = fmt(discounted);
+        }
+        _aiFilled = true;
+      });
+      AppHaptics.success();
+    } on ApiException catch (e) {
+      messenger.showSnackBar(SnackBar(
+          content: Text(e.status == 401 || e.status == 403 ? '가게 모드로 로그인해야 쓸 수 있어요.' : e.message),
+          behavior: SnackBarBehavior.floating));
+    } catch (_) {
+      messenger.showSnackBar(const SnackBar(content: Text('AI 초안을 받지 못했어요. 직접 입력해 주세요.'), behavior: SnackBarBehavior.floating));
+    } finally {
+      if (mounted) setState(() => _aiLoading = false);
     }
   }
 
@@ -193,7 +250,7 @@ class _DealCreateScreenState extends State<DealCreateScreen> {
     // 웹 타임딜 서버에 상품+딜로 등록합니다(웹 홈·판매자 센터에도 바로 보임).
     // 직접 고른 사진은 웹 Storage에 올리고, 아니면 고른 카테고리 기본 사진 주소를 씁니다.
     try {
-      final bytes = _imageFile == null ? null : await _imageFile!.readAsBytes();
+      final bytes = _imageBytes;
       if (!mounted) return;
       await context.read<DealProvider>().createDeal(
             title: title,
@@ -251,7 +308,9 @@ class _DealCreateScreenState extends State<DealCreateScreen> {
                 GestureDetector(
                   onTap: () => setState(() {
                     _imageFile = null;
+                    _imageBytes = null;
                     _selectedPresetUrl = null;
+                    _aiFilled = false;
                   }),
                   child: const Text(
                     '초기화',
@@ -271,10 +330,10 @@ class _DealCreateScreenState extends State<DealCreateScreen> {
                     style: BorderStyle.solid),
                 color: AppColors.primary.withValues(alpha: 0.04),
               ),
-              child: _imageFile != null
+              child: _imageBytes != null
                   ? ClipRRect(
                       borderRadius: BorderRadius.circular(15),
-                      child: Image.file(File(_imageFile!.path),
+                      child: Image.memory(_imageBytes!,
                           fit: BoxFit.cover, width: double.infinity),
                     )
                   : _selectedPresetUrl != null
@@ -329,6 +388,33 @@ class _DealCreateScreenState extends State<DealCreateScreen> {
                         ),
             ),
           ),
+          if (_imageBytes != null) ...[
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: _aiLoading ? null : _aiDraft,
+              icon: _aiLoading
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                  : Icon(LucideIcons.sparkles, size: 18),
+              label: Text(_aiLoading ? 'AI가 사진을 읽는 중…' : 'AI로 자동 입력 (사진으로 상품명·설명·가격 초안)'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.primary,
+                side: const BorderSide(color: AppColors.primary),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+          ],
+          if (_aiFilled) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Text('AI가 작성한 초안이에요. 상품명·가격을 확인하고 고친 뒤 등록해 주세요.',
+                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+            ),
+          ],
           const SizedBox(height: 12),
 
           // 추천 상품 프리셋 (탭 시 고화질 사진 및 기본 정보 자동 입력)
@@ -351,6 +437,7 @@ class _DealCreateScreenState extends State<DealCreateScreen> {
                     setState(() {
                       _selectedPresetUrl = t.imageUrl;
                       _imageFile = null;
+                      _imageBytes = null;
                       _selectedCategory = t.category;
                       if (_titleCtrl.text.isEmpty) _titleCtrl.text = t.defaultTitle;
                       if (_originalCtrl.text.isEmpty) _originalCtrl.text = '${t.defaultOriginal}';
